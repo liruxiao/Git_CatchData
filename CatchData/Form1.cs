@@ -326,29 +326,33 @@ namespace WindowsFormsApp1
                 //90后 +4501
                 var xLevel0 = Level0.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
-                //90后 +非4501
-                var xLevel1 = Level0.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
-
                 //85后+4501
+                var xLevel1 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+
+                                                && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+
+                //80-84 +4501
                 var xLevel2 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                                 && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+                //70后 +4501
+                var xLevel3 = Level0.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+
+
+
+                //90后 +非4501
+                var xLevel4 = Level0.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
+
+
                 //85后 +非4501
-                var xLevel3 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel5 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
-                //80-84 +4501
-                var xLevel4 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
-
-                                                && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //80-84  +非4501
-                var xLevel5 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
+                var xLevel6 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
-
-                //70后 +4501
-                var xLevel6 = Level0.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //70后 +非4501
                 var xLevel7 = Level0.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
