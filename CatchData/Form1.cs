@@ -243,68 +243,67 @@ namespace WindowsFormsApp1
             //预设清单
             var ReserveDataSet = GetExcelTableByOleDB(textBox2.Text, "sheet1$", "select * from [sheet1$]");
 
-            //排除清单
-            var ExceptDataSet = GetExcelTableByOleDB(textBox10.Text, "sheet1$", "select * from [sheet1$]");
-
-
             if (SourceDataSet == null)
             {
                 MessageBox.Show("有异常发生，无法生成结果，请联系开发人员！");
             }
 
-            var ReserveCustomerList = DataSetToListForTargetList(ReserveDataSet, 1, 0, 0);
+
 
             var SourceList = DataSetToList<BankDataObj>(SourceDataSet, 0);
 
-            var ReserveList = SourceList.Where(r => ReserveCustomerList.Any(x => x.Equals(r.CustomerCode))).ToList();
+            //分组客户代码, 取 客户代码与最大金额集合
+            var TempList1 = from u in SourceList
+                            group u by u.CustomerCode into MoneyMaxGroup
+                            orderby MoneyMaxGroup.Max(m => m.Money)
+                            select new BankDataObj { CustomerCode = MoneyMaxGroup.Key, Money = MoneyMaxGroup.Max(m => m.Money) };
+
+            var TempList2 = from u in SourceList
+                            join d in TempList1 on u.CustomerCode equals d.CustomerCode
+                            where d.Money == u.Money
+                            select u;
+
+            SourceList = TempList2.ToList();
+
+            List<BankDataObj> ReserveList = new List<BankDataObj>();
+
+            if (ReserveDataSet != null)
+            {
+                var ReserveCustomerList = DataSetToListForTargetList(ReserveDataSet, 1, 0, 0);
+
+                if (ReserveCustomerList != null && ReserveCustomerList.Count > 0)
+                {
+                    ReserveList = SourceList.Where(r => ReserveCustomerList.Any(x => x.Equals(r.CustomerCode))).ToList();
+                }
+            }
 
             //优先排除预定清单,然后筛选金额
             SourceList = SourceList.Except(ReserveList).Where(r => r.Money >= double.Parse(textBox7.Text) && r.Money <= double.Parse(textBox8.Text)).ToList();
 
-            if (ReserveList != null)
+
+            //排除清单
+            var ExceptDataSet = GetExcelTableByOleDB(textBox10.Text, "sheet1$", "select * from [sheet1$]");
+
+            List<ExceptObj> ExpSourceList = new List<ExceptObj>();
+            if (ExceptDataSet != null)
             {
-                //取金额最大的客户代码
-                var temp = from u in ReserveList
-                           group u by u.CustomerCode into MoneyMaxGroup
-                           orderby MoneyMaxGroup.Max(m => m.Money)
-                           select new BankDataObj { CustomerCode = MoneyMaxGroup.Key, Money = MoneyMaxGroup.Max(m => m.Money) };
-
-                //关联获取完整数据
-                var result = from u in ReserveList
-                             join d in temp on u.CustomerCode equals d.CustomerCode
-                             where (d.Money == u.Money)
-                             select u;
-
-                ReserveList = result.ToList();
-
+                ExpSourceList = DataSetToList<ExceptObj>(ExceptDataSet, 0);
             }
-
-            var ExpSourceList = DataSetToList<ExceptObj>(ExceptDataSet, 0);
 
             //被排除清单
             List<BankDataObj> ExceptList = new List<BankDataObj>();
 
-
-            foreach (var one in ExpSourceList)
+            if (ExpSourceList != null && ExpSourceList.Count > 0)
             {
-                //如果有身份证号，则组合判断姓名及身份证
-                if (!string.IsNullOrEmpty(one._ID))
+                //排除集合
+                ExceptList = SourceList.Where(r => ExpSourceList.Select(m => m._ID).Any(x => x.Equals(r.ID))).ToList();
+                if (ExceptList != null)
                 {
-                    ExceptList.AddRange(SourceList.Where(r => r.Name.Equals(one.Name) && r.ID.Equals(one._ID)).ToList());
+                    SourceList = SourceList.Except(ExceptList).ToList();
                 }
-                else
-                {
-                    //没有身份证号，则仅判断姓名
-                    ExceptList.AddRange(SourceList.Where(r => r.Name.Equals(one.Name)).ToList());
-                }
-
-
             }
 
-            SourceList = SourceList.Except(ExceptList).ToList();
-
-            List<BankDataObj> Level0 = new List<BankDataObj>();
-
+            List<BankDataObj> CurrentYearAndMonthList = new List<BankDataObj>();
 
             List<BankDataObj> ExpList = new List<BankDataObj>();
             List<BankDataObj> FinalList = ReserveList;     //优先预留清单
@@ -319,48 +318,50 @@ namespace WindowsFormsApp1
             //如果选中年月优先
             if (checkBox2.CheckState == CheckState.Checked)
             {
-                Level0 = SourceList.Where(x => (x.InTime.Year == dateTimePicker1.Value.Year && x.InTime.Month == dateTimePicker1.Value.Month)).OrderByDescending(r => r.Money).ToList();
+                ////获取当前选中的年月对应的抢案数据集合
+                CurrentYearAndMonthList = SourceList.Where(x => (x.InTime.Year == dateTimePicker1.Value.Year && x.InTime.Month == dateTimePicker1.Value.Month)).OrderByDescending(r => r.Money).ToList();
 
+                //剩余的抢案数据集合
                 SourceList = SourceList.Where(x => new DateTime(x.InTime.Year, x.InTime.Month, 1) != new DateTime(dateTimePicker1.Value.Year, dateTimePicker1.Value.Month, 1)).OrderByDescending(r => r.InTime).ToList();
 
                 //90后 +4501
-                var xLevel0 = Level0.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+                var xLevel0 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //85后+4501
-                var xLevel1 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel1 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                                 && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //80-84 +4501
-                var xLevel2 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel2 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                                 && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
                 //70后 +4501
-                var xLevel3 = Level0.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+                var xLevel3 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
 
 
                 //90后 +非4501
-                var xLevel4 = Level0.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
+                var xLevel4 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
 
                 //85后 +非4501
-                var xLevel5 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel5 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 //80-84  +非4501
-                var xLevel6 = Level0.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
+                var xLevel6 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 //70后 +非4501
-                var xLevel7 = Level0.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
+                var xLevel7 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 List<BankDataObj> xExpList = new List<BankDataObj>();
                 List<BankDataObj> xInlList = new List<BankDataObj>();
 
-                //限制额度
+                //新案额度
                 var xLimitTotal = Convert.ToDouble(textBox9.Text);
                 double xTotal = 0;
 
@@ -434,7 +435,7 @@ namespace WindowsFormsApp1
             //如果选中按档排除月
             if (checkBox3.CheckState == CheckState.Checked)
             {
-                SourceList = SourceList.Where(x => x.InTime.Year == dateTimePicker1.Value.Year).OrderByDescending(r => r.Money).ToList();
+                SourceList = SourceList.Where(x => x.InTime.Year >= 2018).OrderByDescending(r => r.Money).ToList();
             }
 
 
@@ -605,7 +606,7 @@ namespace WindowsFormsApp1
             DataSetToExcel(ExceptList, 2, 1, 2, textBox6.Text);
             DataSetToExcel(ExpList, 2, 1, 3, textBox6.Text);
 
-            DataSetToExcel(Level0, 2, 1, 4, textBox6.Text);
+            DataSetToExcel(CurrentYearAndMonthList, 2, 1, 4, textBox6.Text);
             DataSetToExcel(Level1, 2, 1, 5, textBox6.Text);
             DataSetToExcel(Level2, 2, 1, 6, textBox6.Text);
             DataSetToExcel(Level3, 2, 1, 7, textBox6.Text);

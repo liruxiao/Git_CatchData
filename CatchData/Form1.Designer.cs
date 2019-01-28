@@ -285,9 +285,9 @@
             this.checkBox2.AutoSize = true;
             this.checkBox2.Location = new System.Drawing.Point(657, 219);
             this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(72, 16);
+            this.checkBox2.Size = new System.Drawing.Size(84, 16);
             this.checkBox2.TabIndex = 23;
-            this.checkBox2.Text = "年月优先";
+            this.checkBox2.Text = "抢当月新案";
             this.checkBox2.UseVisualStyleBackColor = true;
             this.checkBox2.CheckedChanged += new System.EventHandler(this.checkBox2_CheckedChanged);
             // 
@@ -298,7 +298,7 @@
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(84, 16);
             this.checkBox3.TabIndex = 24;
-            this.checkBox3.Text = "按档排除月";
+            this.checkBox3.Text = "2018年以后";
             this.checkBox3.UseVisualStyleBackColor = true;
             this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
             // 
