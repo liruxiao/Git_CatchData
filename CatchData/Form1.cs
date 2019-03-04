@@ -273,7 +273,25 @@ namespace WindowsFormsApp1
 
                 if (ReserveCustomerList != null && ReserveCustomerList.Count > 0)
                 {
-                    ReserveList = SourceList.Where(r => ReserveCustomerList.Any(x => x.Equals(r.CustomerCode))).ToList();
+                    //金额从大到小排序
+                    ReserveList = SourceList.Where(r => ReserveCustomerList.Any(x => x.Equals(r.CustomerCode))).OrderByDescending(r => r.Money).ToList();
+
+                    if (ReserveList != null && ReserveList.Count > 0)
+                    {
+                        if (ReserveList.Sum(r => r.Money) >= Convert.ToDouble(textBox5.Text) * 10000)
+                        {
+                            //务必确保 预留金额不超过总额度!!!!!
+
+                            return;
+                        }
+
+                    }
+                    else
+                    {
+                        ReserveList = new List<BankDataObj>();
+                    }
+
+
                 }
             }
 
@@ -303,60 +321,60 @@ namespace WindowsFormsApp1
                 }
             }
 
-            List<BankDataObj> CurrentYearAndMonthList = new List<BankDataObj>();
+            List<BankDataObj> NewDataList = new List<BankDataObj>();
 
             List<BankDataObj> ExpList = new List<BankDataObj>();
             List<BankDataObj> FinalList = ReserveList;     //优先预留清单
 
             //限制额度
             var LimitTotal = Convert.ToDouble(textBox5.Text) * 10000;
-            double Total = 0;
+            double Total = FinalList.Sum(r => r.Money);             //加入预留案池额度
             bool ContinueFlag = true;
 
             List<BankDataObj>[] AllLevel = new List<BankDataObj>[10];
 
-            //如果选中年月优先
+            //如果选中"抢当月新案"
             if (checkBox2.CheckState == CheckState.Checked)
             {
-                ////获取当前选中的年月对应的抢案数据集合
-                CurrentYearAndMonthList = SourceList.Where(x => (x.InTime.Year == dateTimePicker1.Value.Year && x.InTime.Month == dateTimePicker1.Value.Month)).OrderByDescending(r => r.Money).ToList();
+                ////获取新案池数据集合
+                NewDataList = SourceList.Where(x => (x.InTime.Year == dateTimePicker1.Value.Year && x.InTime.Month == dateTimePicker1.Value.Month)).OrderByDescending(r => r.Money).ToList();
 
-                //剩余的抢案数据集合
+                //排除新案之后的 剩余案池数据
                 SourceList = SourceList.Where(x => new DateTime(x.InTime.Year, x.InTime.Month, 1) != new DateTime(dateTimePicker1.Value.Year, dateTimePicker1.Value.Month, 1)).OrderByDescending(r => r.InTime).ToList();
 
                 //90后 +4501
-                var xLevel0 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+                var xLevel0 = NewDataList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //85后+4501
-                var xLevel1 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel1 = NewDataList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                                 && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
                 //80-84 +4501
-                var xLevel2 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel2 = NewDataList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                                 && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
                 //70后 +4501
-                var xLevel3 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
+                var xLevel3 = NewDataList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.StartsWith("4501")).OrderByDescending(r => r.Money).ToList();
 
 
 
                 //90后 +非4501
-                var xLevel4 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
+                var xLevel4 = NewDataList.Where(x => x.ID.Substring(6, 3).Equals("199") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
 
                 //85后 +非4501
-                var xLevel5 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
+                var xLevel5 = NewDataList.Where(x => (x.ID.Substring(6, 4).Equals("1985") || x.ID.Substring(6, 4).Equals("1986") || x.ID.Substring(6, 4).Equals("1987") || x.ID.Substring(6, 4).Equals("1988") || x.ID.Substring(6, 4).Equals("1989"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 //80-84  +非4501
-                var xLevel6 = CurrentYearAndMonthList.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
+                var xLevel6 = NewDataList.Where(x => (x.ID.Substring(6, 4).Equals("1980") || x.ID.Substring(6, 4).Equals("1981") || x.ID.Substring(6, 4).Equals("1982") || x.ID.Substring(6, 4).Equals("1983") || x.ID.Substring(6, 4).Equals("1984"))
 
                                             && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 //70后 +非4501
-                var xLevel7 = CurrentYearAndMonthList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
+                var xLevel7 = NewDataList.Where(x => x.ID.Substring(6, 3).Equals("197") && x.ID.Substring(0, 4) != "4501").OrderByDescending(r => r.Money).ToList();
 
                 List<BankDataObj> xExpList = new List<BankDataObj>();
                 List<BankDataObj> xInlList = new List<BankDataObj>();
@@ -389,7 +407,8 @@ namespace WindowsFormsApp1
                     {
                         xTotal = xTotal + one.Sum(x => x.Money);
 
-                        if (xTotal < xLimitTotal)
+                        //新案额度不超标,而且总额度不超标
+                        if (xTotal < xLimitTotal && (Total + xTotal) < LimitTotal)
                         {
                             xInlList.AddRange(one);
                             continue;
@@ -405,20 +424,18 @@ namespace WindowsFormsApp1
 
                 var xtotal_temp = xInlList.Sum(x => x.Money);
 
-                //获取最后的级别， 按金额大到小逐一剔除记录，直到最接近总额度
-                foreach (var one in xExpList)
+                //筛选剩余的集合， 按金额从小到大排序，遍历求和额度,直到最接近总额度
+                foreach (var one in xExpList.OrderBy(r => r.Money))
                 {
-                    //剔除某条记录
-                    xExpList = xExpList.Where(x => x != one).OrderByDescending(r => r.Money).ToList();
-
-                    //判断剩下总金额是否超过额度
-                    if (xLimitTotal < xtotal_temp + xExpList.Sum(x => x.Money))
+                    //判断剩下总金额是否超过额度,新案额度不超标,而且总额度不超标
+                    if ((xLimitTotal > xtotal_temp + one.Money) && (xtotal_temp + one.Money + Total) < LimitTotal)
                     {
+                        xtotal_temp = xtotal_temp + one.Money;
+                        xInlList.Add(one);
                         continue;
                     }
                     else
                     {
-                        xInlList.AddRange(xExpList);
                         break;
                     }
 
@@ -426,13 +443,13 @@ namespace WindowsFormsApp1
 
                 FinalList.AddRange(xInlList);
 
-                //新案总额
-                Total = Total + FinalList.Sum(x => x.Money);
+                //当前案池总量
+                Total = FinalList.Sum(x => x.Money);
 
             }
 
 
-            //如果选中按档排除月
+            //如果选中"2018年以后"
             if (checkBox3.CheckState == CheckState.Checked)
             {
                 SourceList = SourceList.Where(x => x.InTime.Year >= 2018).OrderByDescending(r => r.Money).ToList();
@@ -541,49 +558,30 @@ namespace WindowsFormsApp1
                     }
                     continue;
                 }
-            }
 
-            var total_temp = FinalList.Sum(x => x.Money);
 
-            //获取最后的级别， 按金额大到小逐一剔除记录，直到最接近总额度
-            foreach (var one in ExpList)
-            {
-                //剔除某条记录
-                ExpList = ExpList.Where(x => x != one).OrderByDescending(r => r.Money).ToList();
+                Total = FinalList.Sum(x => x.Money);
 
-                //判断剩下总金额是否超过额度
-                if (LimitTotal < total_temp + ExpList.Sum(x => x.Money))
+                //遍历剩余金额的案池集合， 优先金额小的，求和案池金额,直到最接近总额度
+                foreach (var one in ExpList.OrderBy(r => r.Money))
                 {
-                    continue;
+                    //判断剩下总金额是否超过额度
+                    if (LimitTotal > Total + one.Money)
+                    {
+                        Total = Total + one.Money;
+                        FinalList.Add(one);
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
                 }
-                else
-                {
-                    FinalList.AddRange(ExpList);
-                    break;
-                }
+
+
 
             }
-
-            //InlList = InlList.AddRange(xInlList);
-
-
-            //MessageBox.Show(InlList.Sum(x => x.Money).ToString());
-
-
-            //var Level1Amt = Level1.Sum(x => x.Money);
-            //var Level2Amt = Level2.Sum(x => x.Money);
-            //var Level3Amt = Level3.Sum(x => x.Money);
-            //var Level4Amt = Level4.Sum(x => x.Money);
-            //var Level5Amt = Level5.Sum(x => x.Money);
-            //var Level6Amt = Level6.Sum(x => x.Money);
-            //var Level7Amt = Level7.Sum(x => x.Money);
-            //var Level8Amt = Level8.Sum(x => x.Money);
-            //var Level9Amt = Level9.Sum(x => x.Money);
-            //var Level10Amt = Level10.Sum(x => x.Money);
-
-            //var Total = Level1Amt + Level2Amt + Level3Amt + Level4Amt  + Level5Amt + Level6Amt + Level7Amt + Level8Amt + Level9Amt + Level10Amt;
-
-            //MessageBox.Show(Total.ToString());
 
             DataSetToExcel(FinalList.OrderByDescending(r => r.Money).ToList(), textBox2.Text);
 
@@ -606,7 +604,7 @@ namespace WindowsFormsApp1
             DataSetToExcel(ExceptList, 2, 1, 2, textBox6.Text);
             DataSetToExcel(ExpList, 2, 1, 3, textBox6.Text);
 
-            DataSetToExcel(CurrentYearAndMonthList, 2, 1, 4, textBox6.Text);
+            DataSetToExcel(NewDataList, 2, 1, 4, textBox6.Text);
             DataSetToExcel(Level1, 2, 1, 5, textBox6.Text);
             DataSetToExcel(Level2, 2, 1, 6, textBox6.Text);
             DataSetToExcel(Level3, 2, 1, 7, textBox6.Text);
